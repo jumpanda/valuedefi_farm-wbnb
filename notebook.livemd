@@ -46,6 +46,22 @@ Enum.count(csv_data_filtered)
 
 ```elixir
 defmodule Parser do
+  # ignore value contracts, pool and vault address 
+  def run([_, _, _, _, "0x1d954998067db0074e810a85fd43e4e44a655153", _to, _]), do: []
+  def run([_, _, _, _, _from, "0x1d954998067db0074e810a85fd43e4e44a655153", _]), do: []
+
+  def run([_, _, _, _, _from, "0x7be4d5a99c903c437ec77a20cb6d0688cbb73c7f", _]), do: []
+  def run([_, _, _, _, "0x7be4d5a99c903c437ec77a20cb6d0688cbb73c7f", _to, _]), do: []
+
+  def run([_, _, _, _, _from, "0x85f94c7c3ba0841aff76c7539349816b856b3fea", _]), do: []
+  def run([_, _, _, _, "0x85f94c7c3ba0841aff76c7539349816b856b3fea", _to, _]), do: []
+
+  def run([_, _, _, _, _from, "0x8054f464902267b1ecb4c936a3bad2559058ab77", _]), do: []
+  def run([_, _, _, _, "0x8054f464902267b1ecb4c936a3bad2559058ab77", _to, _]), do: []
+
+  def run([_, _, _, _, _from, "0xd56339f80586c08b7a4e3a68678d16d37237bd96", _]), do: []
+  def run([_, _, _, _, "0xd56339f80586c08b7a4e3a68678d16d37237bd96", _to, _]), do: []
+
   def run([_, _, _, _, "0x0000000000000000000000000000000000000000", to, quantity]) do
     # enter liquidity
     amount = D.new(quantity)
@@ -58,11 +74,11 @@ defmodule Parser do
     [{from, D.negate(amount)}]
   end
 
-  # def run([_, _, _, _, from, to, quantity]) do
-  #  # transfer token
-  #  {amount,_} = Float.parse(quantity)
-  #  [{from, -amount},{to, amount}]
-  # Eend
+  def run([_, _, _, _, from, to, quantity]) do
+    # transfer token
+    amount = D.new(quantity)
+    [{from, D.negate(amount)}, {to, amount}]
+  end
 
   def run(_), do: []
 end
