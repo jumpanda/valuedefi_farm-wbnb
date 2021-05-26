@@ -1,0 +1,105 @@
+# Holdings before Farm-wBNB valuedefi pool exploit
+
+## Imports
+
+```elixir
+Mix.install([
+  {:nimble_csv, "~> 1.1"}
+])
+
+alias NimbleCSV.RFC4180, as: CSV
+```
+
+## Read csv
+
+```elixir
+csv_data =
+  "bsscan_txs.csv"
+  |> Path.expand(__DIR__)
+  |> File.read!()
+  |> CSV.parse_string()
+```
+
+```elixir
+Enum.count(csv_data)
+```
+
+## Filter post exploit
+
+```elixir
+epoch_datetime_filter =
+  DateTime.to_unix(DateTime.from_naive!(~N[2021-05-07 10:51:00.000], "Etc/UTC"))
+```
+
+```elixir
+csv_data_filtered =
+  Enum.filter(csv_data, fn [_, _, epoch | _] ->
+    String.to_integer(epoch) < epoch_datetime_filter
+  end)
+```
+
+```elixir
+Enum.count(csv_data_filtered)
+```
+
+```elixir
+defmodule Parser do
+  def run([_, _, _, _, "0x0000000000000000000000000000000000000000", to, quantity]) do
+    # enter liquidity
+    {amount, _} = Float.parse(quantity)
+    [{to, amount}]
+  end
+
+  def run([_, _, _, _, from, "0x0000000000000000000000000000000000000000", quantity]) do
+    # exit liquidity
+    {amount, _} = Float.parse(quantity)
+    [{from, -amount}]
+  end
+
+  # def run([_, _, _, _, from, to, quantity]) do
+  #  # transfer token
+  #  {amount,_} = Float.parse(quantity)
+  #  [{from, -amount},{to, amount}]
+  # Eend
+
+  def run(_), do: []
+end
+```
+
+```elixir
+parsed_data =
+  csv_data_filtered
+  |> Enum.flat_map(&Parser.run/1)
+```
+
+```elixir
+grouped_by_address =
+  parsed_data
+  |> Enum.group_by(fn {a, _} -> a end)
+```
+
+### Calculate LP-token holdings and $FARM equivalent
+
+```elixir
+# https://bscscan.com/tx/0x640fb1cb37be3b7cf5b29d90f3b6cdec163b50a66ea954df2aa81327ba896e78
+lp_token_rate = 2.57213891747
+
+holdings =
+  grouped_by_address
+  |> Enum.map(fn {k, v} -> {k, Enum.reduce(v, 0, fn {_, b}, acc -> acc + b end)} end)
+  |> Enum.sort_by(fn {_, v} -> v end, :desc)
+  |> Enum.map(fn {k, v} -> [k, v, v * lp_token_rate] end)
+  |> List.insert_at(0, ["Address", "LP-tokens", "$FARM equivalent"])
+```
+
+### Write result to file
+
+```elixir
+holdings_csv = CSV.dump_to_iodata(holdings)
+```
+
+```elixir
+"holdings.csv"
+|> Path.expand(__DIR__)
+|> File.write!(holdings_csv)
+```
