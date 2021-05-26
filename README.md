@@ -18,6 +18,5 @@ livebook server
 - evaluate all sections
 
 ## Notes
-- Ignores transfers and only considers minting/destroying LP-tokens
 - Uses last known "good" liquidity change as LP-token -> $FARM rate
 - Only takes tx pre exploit into account
