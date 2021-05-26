@@ -4,10 +4,12 @@
 
 ```elixir
 Mix.install([
-  {:nimble_csv, "~> 1.1"}
+  {:nimble_csv, "~> 1.1"},
+  {:decimal, "~> 2.0"}
 ])
 
 alias NimbleCSV.RFC4180, as: CSV
+alias Decimal, as: D
 ```
 
 ## Read csv
@@ -46,14 +48,14 @@ Enum.count(csv_data_filtered)
 defmodule Parser do
   def run([_, _, _, _, "0x0000000000000000000000000000000000000000", to, quantity]) do
     # enter liquidity
-    {amount, _} = Float.parse(quantity)
+    amount = D.new(quantity)
     [{to, amount}]
   end
 
   def run([_, _, _, _, from, "0x0000000000000000000000000000000000000000", quantity]) do
     # exit liquidity
-    {amount, _} = Float.parse(quantity)
-    [{from, -amount}]
+    amount = D.new(quantity)
+    [{from, D.negate(amount)}]
   end
 
   # def run([_, _, _, _, from, to, quantity]) do
@@ -82,13 +84,13 @@ grouped_by_address =
 
 ```elixir
 # https://bscscan.com/tx/0x640fb1cb37be3b7cf5b29d90f3b6cdec163b50a66ea954df2aa81327ba896e78
-lp_token_rate = 2.57213891747
+lp_token_rate = D.new("2.57213891747")
 
 holdings =
   grouped_by_address
-  |> Enum.map(fn {k, v} -> {k, Enum.reduce(v, 0, fn {_, b}, acc -> acc + b end)} end)
-  |> Enum.sort_by(fn {_, v} -> v end, :desc)
-  |> Enum.map(fn {k, v} -> [k, v, v * lp_token_rate] end)
+  |> Enum.map(fn {k, v} -> {k, Enum.reduce(v, D.new(0), fn {_, b}, acc -> D.add(acc, b) end)} end)
+  |> Enum.sort_by(fn {_, v} -> v end, {:desc, Decimal})
+  |> Enum.map(fn {k, v} -> [k, v, D.mult(v, lp_token_rate)] end)
   |> List.insert_at(0, ["Address", "LP-tokens", "$FARM equivalent"])
 ```
 
